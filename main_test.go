@@ -19,7 +19,7 @@ type testPayload struct {
 }
 
 func TestWebhookHandler(t *testing.T) {
-	os.Setenv("FOO", "token1,token2")
+	os.Setenv("WEBHOOK_ENABLED_STREAMKEYS", "token1:streamkey1,token2:streamkey2")
 
 	payload := testPayload{
 		Action:      "test",
@@ -32,7 +32,7 @@ func TestWebhookHandler(t *testing.T) {
 	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 
-	// Use the same handler as in main.go
+	// Handler logic matching main.go
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "Only POST method is accepted", http.StatusMethodNotAllowed)
@@ -45,26 +45,29 @@ func TestWebhookHandler(t *testing.T) {
 			return
 		}
 
-		fooEnv := os.Getenv("FOO")
-		var validTokens []string
-		if fooEnv != "" {
-			validTokens = strings.Split(fooEnv, ",")
-			for i := range validTokens {
-				validTokens[i] = strings.TrimSpace(validTokens[i])
+		enabledStreamKeys := os.Getenv("WEBHOOK_ENABLED_STREAMKEYS")
+		tokenToStreamKey := make(map[string]string)
+		if enabledStreamKeys != "" {
+			pairs := strings.Split(enabledStreamKeys, ",")
+			for _, pair := range pairs {
+				pair = strings.TrimSpace(pair)
+				if pair == "" {
+					continue
+				}
+				parts := strings.SplitN(pair, ":", 2)
+				if len(parts) == 2 {
+					bearer := strings.TrimSpace(parts[0])
+					streamKey := strings.TrimSpace(parts[1])
+					tokenToStreamKey[bearer] = streamKey
+				}
 			}
 		}
 
-		isValid := false
-		for _, token := range validTokens {
-			if payload.BearerToken == token {
-				isValid = true
-				break
-			}
-		}
+		streamKey, isValid := tokenToStreamKey[payload.BearerToken]
 
 		if isValid {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(webhookResponse{StreamKey: payload.BearerToken})
+			json.NewEncoder(w).Encode(webhookResponse{StreamKey: streamKey})
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			json.NewEncoder(w).Encode(webhookResponse{})
@@ -75,5 +78,13 @@ func TestWebhookHandler(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+
+	var resp webhookResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if resp.StreamKey != "streamkey1" {
+		t.Errorf("expected streamKey 'streamkey1', got '%s'", resp.StreamKey)
 	}
 }

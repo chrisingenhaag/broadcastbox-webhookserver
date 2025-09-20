@@ -21,13 +21,22 @@ type webhookResponse struct {
 }
 
 func main() {
-	// Read WEBHOOK_ENABLED_STREAMKEYS from environment and split by comma
+	// Read WEBHOOK_ENABLED_STREAMKEYS from environment and parse as bearerToken:streamKey tuples
 	enabledStreamKeys := os.Getenv("WEBHOOK_ENABLED_STREAMKEYS")
-	var validTokens []string
+	tokenToStreamKey := make(map[string]string)
 	if enabledStreamKeys != "" {
-		validTokens = strings.Split(enabledStreamKeys, ",")
-		for i := range validTokens {
-			validTokens[i] = strings.TrimSpace(validTokens[i])
+		pairs := strings.Split(enabledStreamKeys, ",")
+		for _, pair := range pairs {
+			pair = strings.TrimSpace(pair)
+			if pair == "" {
+				continue
+			}
+			parts := strings.SplitN(pair, ":", 2)
+			if len(parts) == 2 {
+				bearer := strings.TrimSpace(parts[0])
+				streamKey := strings.TrimSpace(parts[1])
+				tokenToStreamKey[bearer] = streamKey
+			}
 		}
 	}
 
@@ -43,18 +52,11 @@ func main() {
 			return
 		}
 
-		// Check if payload.BearerToken is in validTokens
-		isValid := false
-		for _, token := range validTokens {
-			if payload.BearerToken == token {
-				isValid = true
-				break
-			}
-		}
+		streamKey, isValid := tokenToStreamKey[payload.BearerToken]
 
 		if isValid {
 			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(webhookResponse{StreamKey: payload.BearerToken}); err != nil {
+			if err := json.NewEncoder(w).Encode(webhookResponse{StreamKey: streamKey}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		} else {
