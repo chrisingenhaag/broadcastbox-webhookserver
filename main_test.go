@@ -21,18 +21,6 @@ type testPayload struct {
 func TestWebhookHandler(t *testing.T) {
 	os.Setenv("WEBHOOK_ENABLED_STREAMKEYS", "token1:streamkey1,token2:streamkey2")
 
-	payload := testPayload{
-		Action:      "test",
-		IP:          "127.0.0.1",
-		BearerToken: "token1",
-		QueryParams: map[string]string{},
-		UserAgent:   "test-agent",
-	}
-	body, _ := json.Marshal(payload)
-	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
-	rec := httptest.NewRecorder()
-
-	// Handler logic matching main.go
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "Only POST method is accepted", http.StatusMethodNotAllowed)
@@ -63,28 +51,100 @@ func TestWebhookHandler(t *testing.T) {
 			}
 		}
 
-		streamKey, isValid := tokenToStreamKey[payload.BearerToken]
-
-		if isValid {
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(webhookResponse{StreamKey: streamKey})
-		} else {
-			w.WriteHeader(http.StatusForbidden)
-			json.NewEncoder(w).Encode(webhookResponse{})
+		switch payload.Action {
+		case "whip-connect":
+			streamKey, isValid := tokenToStreamKey[payload.BearerToken]
+			if isValid {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(webhookResponse{StreamKey: streamKey})
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(webhookResponse{})
+			}
+		case "whep-connect":
+			found := false
+			for _, v := range tokenToStreamKey {
+				if v == payload.BearerToken {
+					found = true
+					break
+				}
+			}
+			if found {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(webhookResponse{StreamKey: payload.BearerToken})
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(webhookResponse{})
+			}
+		default:
+			http.Error(w, "Invalid action", http.StatusBadRequest)
 		}
 	})
 
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", rec.Code)
+	// whip-connect: BearerToken as key
+	payload := testPayload{
+		Action:      "whip-connect",
+		IP:          "127.0.0.1",
+		BearerToken: "token1",
+		QueryParams: map[string]string{},
+		UserAgent:   "test-agent",
 	}
-
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("whip-connect: expected status 200, got %d", rec.Code)
+	}
 	var resp webhookResponse
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
+		t.Fatalf("whip-connect: failed to decode response: %v", err)
 	}
 	if resp.StreamKey != "streamkey1" {
-		t.Errorf("expected streamKey 'streamkey1', got '%s'", resp.StreamKey)
+		t.Errorf("whip-connect: expected streamKey 'streamkey1', got '%s'", resp.StreamKey)
+	}
+
+	// whep-connect: BearerToken as value (streamKey)
+	payload = testPayload{
+		Action:      "whep-connect",
+		IP:          "127.0.0.1",
+		BearerToken: "streamkey2",
+		QueryParams: map[string]string{},
+		UserAgent:   "test-agent",
+	}
+	body, _ = json.Marshal(payload)
+	req = httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("whep-connect: expected status 200, got %d", rec.Code)
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("whep-connect: failed to decode response: %v", err)
+	}
+	if resp.StreamKey != "streamkey2" {
+		t.Errorf("whep-connect: expected streamKey 'streamkey2', got '%s'", resp.StreamKey)
+	}
+
+	// whep-connect: BearerToken not found
+	payload = testPayload{
+		Action:      "whep-connect",
+		IP:          "127.0.0.1",
+		BearerToken: "notfound",
+		QueryParams: map[string]string{},
+		UserAgent:   "test-agent",
+	}
+	body, _ = json.Marshal(payload)
+	req = httptest.NewRequest("POST", "/", bytes.NewReader(body))
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("whep-connect (notfound): expected status 403, got %d", rec.Code)
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("whep-connect (notfound): failed to decode response: %v", err)
+	}
+	if resp.StreamKey != "" {
+		t.Errorf("whep-connect (notfound): expected empty streamKey, got '%s'", resp.StreamKey)
 	}
 }

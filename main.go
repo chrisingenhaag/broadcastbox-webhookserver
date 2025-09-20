@@ -52,19 +52,45 @@ func main() {
 			return
 		}
 
-		streamKey, isValid := tokenToStreamKey[payload.BearerToken]
-
-		if isValid {
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(webhookResponse{StreamKey: streamKey}); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+		switch payload.Action {
+		case "whip-connect":
+			// Standard logic: BearerToken must be a key in the map
+			streamKey, isValid := tokenToStreamKey[payload.BearerToken]
+			if isValid {
+				w.WriteHeader(http.StatusOK)
+				if err := json.NewEncoder(w).Encode(webhookResponse{StreamKey: streamKey}); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+			} else {
+				log.Printf("Invalid whip-connect token attempt from IP %s with bearerToken %s\n", payload.IP, payload.BearerToken)
+				w.WriteHeader(http.StatusForbidden)
+				if err := json.NewEncoder(w).Encode(webhookResponse{}); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 			}
-		} else {
-			log.Printf("Invalid token attempt from IP %s with token %s\n", payload.IP, payload.BearerToken)
+		case "whep-connect":
+			// Accept if BearerToken is a value in the map (streamKey)
+			found := false
+			for _, v := range tokenToStreamKey {
+				if v == payload.BearerToken {
+					found = true
+					break
+				}
+			}
+			if found {
+				w.WriteHeader(http.StatusOK)
+				if err := json.NewEncoder(w).Encode(webhookResponse{StreamKey: payload.BearerToken}); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+			log.Printf("Invalid whep-connect token attempt from IP %s with streamKey %s\n", payload.IP, payload.BearerToken)
 			w.WriteHeader(http.StatusForbidden)
 			if err := json.NewEncoder(w).Encode(webhookResponse{}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
+		default:
+			http.Error(w, "Invalid action", http.StatusBadRequest)
 		}
 	})
 
