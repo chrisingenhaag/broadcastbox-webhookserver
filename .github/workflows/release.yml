@@ -16,7 +16,6 @@ jobs:
       packages: write # to be able to publish a Docker image
       issues: write # to be able to comment on released issues
       pull-requests: write # to be able to comment on released pull requests
-      #id-token: write # to enable use of OIDC for npm provenance
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -33,12 +32,24 @@ jobs:
         with:
           node-version: "lts/*"
 
+      - name: Release
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_REGISTRY_USER: ${{ github.actor }}
+        run: |
+          npx --yes semantic-release | tee release.log
+          echo "version=$(grep -oE 'Published release ([0-9]+\\.[0-9]+\\.[0-9]+)' release.log | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+')" >> $GITHUB_OUTPUT
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
             ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ steps.release.outputs.version }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -55,11 +66,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCKER_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-          DOCKER_REGISTRY_USER: ${{ github.actor }}
-          #NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx --yes semantic-release
