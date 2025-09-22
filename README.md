@@ -1,9 +1,22 @@
-
 # BroadcastBox Webhook Server
 
 A minimal Go server for authenticating webhook requests using bearer tokens mapped to stream keys via environment variables.
 
 **This server is built to be used together with [github.com/glimesh/broadcast-box](https://github.com/glimesh/broadcast-box).**
+
+
+This server allows asynchronous definition of a secret stream key and a string representing the name of the stream for your watchers. This enables private streams without the need to expose the key to allow streaming (WHIP).
+
+**Example:**
+
+Suppose you want to allow a streamer to ingest using a secret key, but let viewers watch using a public stream name:
+
+```
+WEBHOOK_ENABLED_STREAMKEYS="supersecretkey:myprivatestream"
+```
+
+- The streamer uses `supersecretkey` to start streaming (WHIP connect).
+- Viewers/watchers use `myprivatestream` to watch (WHEP connect), without ever seeing the secret key.
 
 ## Features
 - Accepts POST requests with a JSON payload
