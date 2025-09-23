@@ -34,6 +34,32 @@ WEBHOOK_ENABLED_STREAMKEYS="token1:streamkey1,token2:streamkey2"
 
 ## Usage
 
+## Docker Compose Example
+
+```yaml
+version: '3'
+
+services:
+  broadcastbox:
+    image: "seaduboi/broadcast-box"
+    environment:
+      # your custom settings for
+      - DISABLE_STATUS=true
+      - WEBHOOK_URL=http://webhookserver:8000
+    ports:
+      # adjust according your needs
+      - "8080:8080"
+      - "18084:18084/udp"
+    restart: always
+    links:
+      - "webhookserver"
+  webhookserver:
+    image: "ghcr.io/chrisingenhaag/broadcastbox-webhookserver:1.1.4"
+    environment:
+      - WEBHOOK_ENABLED_STREAMKEYS=mysecretstreamkey:thepublicstreamname
+    restart: always
+```
+
 ### Run Locally
 
 1. Clone the repository:
