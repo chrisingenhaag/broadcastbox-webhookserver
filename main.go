@@ -20,10 +20,10 @@ type webhookResponse struct {
 	StreamKey string `json:"streamKey"`
 }
 
-func main() {
+func parseStreamKeys(env string) map[string]string {
+	m := make(map[string]string)
 	// Read WEBHOOK_ENABLED_STREAMKEYS from environment and parse as bearerToken:streamKey tuples
-	enabledStreamKeys := os.Getenv("WEBHOOK_ENABLED_STREAMKEYS")
-	tokenToStreamKey := make(map[string]string)
+	enabledStreamKeys := env
 	if enabledStreamKeys != "" {
 		pairs := strings.Split(enabledStreamKeys, ",")
 		for _, pair := range pairs {
@@ -35,12 +35,15 @@ func main() {
 			if len(parts) == 2 {
 				bearer := strings.TrimSpace(parts[0])
 				streamKey := strings.TrimSpace(parts[1])
-				tokenToStreamKey[bearer] = streamKey
+				m[bearer] = streamKey
 			}
 		}
 	}
+	return m
+}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+func webhookHandler(tokenToStreamKey map[string]string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			http.Error(w, "Only POST method is accepted", http.StatusMethodNotAllowed)
 			return
@@ -54,7 +57,6 @@ func main() {
 
 		switch payload.Action {
 		case "whip-connect":
-			// Standard logic: BearerToken must be a key in the map
 			streamKey, isValid := tokenToStreamKey[payload.BearerToken]
 			if isValid {
 				w.WriteHeader(http.StatusOK)
@@ -69,7 +71,6 @@ func main() {
 				}
 			}
 		case "whep-connect":
-			// Accept if BearerToken is a value in the map (streamKey)
 			found := false
 			for _, v := range tokenToStreamKey {
 				if v == payload.BearerToken {
@@ -92,8 +93,12 @@ func main() {
 		default:
 			http.Error(w, "Invalid action", http.StatusBadRequest)
 		}
-	})
+	}
+}
 
+func main() {
+	tokenToStreamKey := parseStreamKeys(os.Getenv("WEBHOOK_ENABLED_STREAMKEYS"))
+	http.HandleFunc("/", webhookHandler(tokenToStreamKey))
 	log.Println("Server listening on port 8000")
 	if err := http.ListenAndServe(":8000", nil); err != nil {
 		log.Fatalf("Could not start server: %s\n", err)
