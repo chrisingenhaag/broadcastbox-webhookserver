@@ -54,7 +54,7 @@ jobs:
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ steps.release.outputs.version }}
-
+            type=raw,value=latest,enable={{is_default_branch}}
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
