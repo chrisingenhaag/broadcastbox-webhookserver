@@ -6,22 +6,17 @@ on:
     tags-ignore:
       - '**'
   pull_request:
-    branches-ignore:
-      - main
 
 permissions:
   contents: read
 
 jobs:
   branch-build:
-    name: Release
+    name: branch-build
     runs-on: ubuntu-latest
-  
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
