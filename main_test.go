@@ -74,6 +74,32 @@ func TestWebhookHandler(t *testing.T) {
 			wantStatus:    http.StatusForbidden,
 			wantStreamKey: "",
 		},
+		{
+			// Public stream names must not be usable as ingest tokens.
+			name: "whip-connect: streamKey rejected as bearerToken",
+			payload: testPayload{
+				Action:      "whip-connect",
+				IP:          "127.0.0.1",
+				BearerToken: "streamkey1",
+				QueryParams: map[string]string{},
+				UserAgent:   "test-agent",
+			},
+			wantStatus:    http.StatusForbidden,
+			wantStreamKey: "",
+		},
+		{
+			// Secret ingest tokens must not authenticate viewers.
+			name: "whep-connect: ingest token rejected as bearerToken",
+			payload: testPayload{
+				Action:      "whep-connect",
+				IP:          "127.0.0.1",
+				BearerToken: "token1",
+				QueryParams: map[string]string{},
+				UserAgent:   "test-agent",
+			},
+			wantStatus:    http.StatusForbidden,
+			wantStreamKey: "",
+		},
 	}
 
 	for _, tc := range tests {
