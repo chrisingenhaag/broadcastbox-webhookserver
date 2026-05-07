@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -153,4 +154,58 @@ func TestWebhookHandler(t *testing.T) {
 			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
 		}
 	})
+}
+
+func TestParseStreamKeys(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want map[string]string
+	}{
+		{
+			name: "empty input",
+			in:   "",
+			want: map[string]string{},
+		},
+		{
+			name: "single pair",
+			in:   "token1:streamkey1",
+			want: map[string]string{"token1": "streamkey1"},
+		},
+		{
+			name: "multiple pairs",
+			in:   "token1:streamkey1,token2:streamkey2",
+			want: map[string]string{"token1": "streamkey1", "token2": "streamkey2"},
+		},
+		{
+			name: "whitespace around pairs is trimmed",
+			in:   "  token1 : streamkey1 , token2:streamkey2  ",
+			want: map[string]string{"token1": "streamkey1", "token2": "streamkey2"},
+		},
+		{
+			name: "trailing comma is ignored",
+			in:   "token1:streamkey1,",
+			want: map[string]string{"token1": "streamkey1"},
+		},
+		{
+			name: "pair without colon is skipped",
+			in:   "token1:streamkey1,malformed",
+			want: map[string]string{"token1": "streamkey1"},
+		},
+		{
+			// SplitN(_, ":", 2) keeps anything past the first colon in the value.
+			name: "second colon kept in stream key",
+			in:   "token1:stream:key:1",
+			want: map[string]string{"token1": "stream:key:1"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseStreamKeys(tc.in)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("parseStreamKeys(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
 }
