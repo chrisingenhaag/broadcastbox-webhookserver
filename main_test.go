@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -121,4 +122,35 @@ func TestWebhookHandler(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("non-POST method rejected", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rec.Code)
+		}
+	})
+
+	t.Run("invalid JSON rejected", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/", strings.NewReader("not json"))
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("unknown action rejected", func(t *testing.T) {
+		body, _ := json.Marshal(testPayload{
+			Action:      "bogus-action",
+			BearerToken: "token1",
+		})
+		req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
+		}
+	})
 }
