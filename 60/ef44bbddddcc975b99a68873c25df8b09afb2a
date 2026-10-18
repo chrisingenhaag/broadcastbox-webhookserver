@@ -1,0 +1,19 @@
+README.md
+  s_0beccd56cbd854::t_17fc3d3b6d71f9 29,55,84,117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60ef44bbddddcc975b99a68873c25df8b09afb2a",
+  "prompts": {},
+  "sessions": {
+    "s_0beccd56cbd854": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aab4693d-11ad-4a2b-844f-f40d9c10f6d4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Christian Ingenhaag <christian.ingenhaag@googlemail.com>"
+    }
+  }
+}
