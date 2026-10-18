@@ -1,7 +1,9 @@
 main.go
   s_0beccd56cbd854::t_0d0d6d1bee9ba2 5-6,25,27-36,38,40-43,101-104
+  s_0beccd56cbd854::t_2772d34f56fd9e 5-6,25,27-36,38,40-43,101-104
 main_test.go
   s_0beccd56cbd854::t_9af87befda5884 22-25,164-167,170-177,200-214,226-230
+  s_0beccd56cbd854::t_2772d34f56fd9e 22-25,164-167,170-177,200-214,226-230
 ---
 {
   "schema_version": "authorship/3.0.0",
