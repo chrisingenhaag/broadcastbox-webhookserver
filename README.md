@@ -26,7 +26,7 @@ WEBHOOK_ENABLED_STREAMKEYS="supersecretkey:myprivatestream"
 
 ## Environment Variable
 
-Set `WEBHOOK_ENABLED_STREAMKEYS` to a comma-separated list of `bearerToken:streamKey` pairs. Example:
+Set `WEBHOOK_ENABLED_STREAMKEYS` to a comma-separated list of `bearerToken:streamKey` pairs. The server refuses to start if the variable is empty or a pair is malformed. Example:
 
 ```
 WEBHOOK_ENABLED_STREAMKEYS="token1:streamkey1,token2:streamkey2"
@@ -37,8 +37,6 @@ WEBHOOK_ENABLED_STREAMKEYS="token1:streamkey1,token2:streamkey2"
 ## Docker Compose Example
 
 ```yaml
-version: '3'
-
 services:
   broadcastbox:
     image: "seaduboi/broadcast-box"
@@ -54,7 +52,7 @@ services:
     links:
       - "webhookserver"
   webhookserver:
-    image: "ghcr.io/chrisingenhaag/broadcastbox-webhookserver:1.1.4"
+    image: "ghcr.io/chrisingenhaag/broadcastbox-webhookserver:latest"
     environment:
       - WEBHOOK_ENABLED_STREAMKEYS=mysecretstreamkey:thepublicstreamname
     restart: always
@@ -83,7 +81,7 @@ services:
 curl -X POST http://localhost:8000/ \
   -H "Content-Type: application/json" \
   -d '{
-    "action": "test",
+    "action": "whip-connect",
     "ip": "127.0.0.1",
     "bearerToken": "token1",
     "queryParams": {},
@@ -116,7 +114,7 @@ curl -X POST http://localhost:8000/ \
 
 Run tests with:
 ```sh
-go test
+go test ./...
 ```
 
 ## License
