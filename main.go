@@ -65,7 +65,7 @@ func webhookHandler(tokenToStreamKey map[string]string) http.HandlerFunc {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 				}
 			} else {
-				log.Printf("Invalid whip-connect token attempt from IP %s with bearerToken %s\n", payload.IP, payload.BearerToken)
+				log.Printf("Invalid whip-connect token attempt from IP %q\n", payload.IP)
 				w.WriteHeader(http.StatusForbidden)
 				if err := json.NewEncoder(w).Encode(webhookResponse{}); err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -86,7 +86,7 @@ func webhookHandler(tokenToStreamKey map[string]string) http.HandlerFunc {
 				}
 				return
 			}
-			log.Printf("Invalid whep-connect token attempt from IP %s with streamKey %s\n", payload.IP, payload.BearerToken)
+			log.Printf("Invalid whep-connect token attempt from IP %q with streamKey %q\n", payload.IP, payload.BearerToken)
 			w.WriteHeader(http.StatusForbidden)
 			if err := json.NewEncoder(w).Encode(webhookResponse{}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
