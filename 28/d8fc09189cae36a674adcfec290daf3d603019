@@ -1,0 +1,19 @@
+main.go
+  s_0beccd56cbd854::t_478a9d9ebf6c96 89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "28d8fc09189cae36a674adcfec290daf3d603019",
+  "prompts": {},
+  "sessions": {
+    "s_0beccd56cbd854": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aab4693d-11ad-4a2b-844f-f40d9c10f6d4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Christian Ingenhaag <christian.ingenhaag@googlemail.com>"
+    }
+  }
+}
