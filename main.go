@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,26 +22,25 @@ type webhookResponse struct {
 	StreamKey string `json:"streamKey"`
 }
 
-func parseStreamKeys(env string) map[string]string {
+func parseStreamKeys(env string) (map[string]string, error) {
 	m := make(map[string]string)
-	// Read WEBHOOK_ENABLED_STREAMKEYS from environment and parse as bearerToken:streamKey tuples
-	enabledStreamKeys := env
-	if enabledStreamKeys != "" {
-		pairs := strings.Split(enabledStreamKeys, ",")
-		for _, pair := range pairs {
-			pair = strings.TrimSpace(pair)
-			if pair == "" {
-				continue
-			}
-			parts := strings.SplitN(pair, ":", 2)
-			if len(parts) == 2 {
-				bearer := strings.TrimSpace(parts[0])
-				streamKey := strings.TrimSpace(parts[1])
-				m[bearer] = streamKey
-			}
+	// Parse comma-separated bearerToken:streamKey tuples
+	for _, pair := range strings.Split(env, ",") {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
 		}
+		bearer, streamKey, ok := strings.Cut(pair, ":")
+		bearer, streamKey = strings.TrimSpace(bearer), strings.TrimSpace(streamKey)
+		if !ok || bearer == "" || streamKey == "" {
+			return nil, fmt.Errorf("invalid pair %q: want bearerToken:streamKey", pair)
+		}
+		m[bearer] = streamKey
 	}
-	return m
+	if len(m) == 0 {
+		return nil, errors.New("no bearerToken:streamKey pairs configured")
+	}
+	return m, nil
 }
 
 func webhookHandler(tokenToStreamKey map[string]string) http.HandlerFunc {
@@ -97,7 +98,10 @@ func webhookHandler(tokenToStreamKey map[string]string) http.HandlerFunc {
 }
 
 func main() {
-	tokenToStreamKey := parseStreamKeys(os.Getenv("WEBHOOK_ENABLED_STREAMKEYS"))
+	tokenToStreamKey, err := parseStreamKeys(os.Getenv("WEBHOOK_ENABLED_STREAMKEYS"))
+	if err != nil {
+		log.Fatalf("Invalid WEBHOOK_ENABLED_STREAMKEYS: %s\n", err)
+	}
 	http.HandleFunc("/", webhookHandler(tokenToStreamKey))
 	log.Println("Server listening on port 8000")
 	if err := http.ListenAndServe(":8000", nil); err != nil {

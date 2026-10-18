@@ -19,7 +19,10 @@ type testPayload struct {
 }
 
 func TestWebhookHandler(t *testing.T) {
-	tokenToStreamKey := parseStreamKeys("token1:streamkey1,token2:streamkey2")
+	tokenToStreamKey, err := parseStreamKeys("token1:streamkey1,token2:streamkey2")
+	if err != nil {
+		t.Fatal(err)
+	}
 	handler := webhookHandler(tokenToStreamKey)
 
 	tests := []struct {
@@ -158,14 +161,20 @@ func TestWebhookHandler(t *testing.T) {
 
 func TestParseStreamKeys(t *testing.T) {
 	tests := []struct {
-		name string
-		in   string
-		want map[string]string
+		name    string
+		in      string
+		want    map[string]string
+		wantErr bool
 	}{
 		{
-			name: "empty input",
-			in:   "",
-			want: map[string]string{},
+			name:    "empty input",
+			in:      "",
+			wantErr: true,
+		},
+		{
+			name:    "only separators",
+			in:      " , ,",
+			wantErr: true,
 		},
 		{
 			name: "single pair",
@@ -188,9 +197,21 @@ func TestParseStreamKeys(t *testing.T) {
 			want: map[string]string{"token1": "streamkey1"},
 		},
 		{
-			name: "pair without colon is skipped",
-			in:   "token1:streamkey1,malformed",
-			want: map[string]string{"token1": "streamkey1"},
+			name:    "pair without colon",
+			in:      "token1:streamkey1,malformed",
+			wantErr: true,
+		},
+		{
+			// An empty token would let requests without a bearer token ingest.
+			name:    "empty bearer token",
+			in:      " :streamkey1",
+			wantErr: true,
+		},
+		{
+			// An empty stream key would let requests without a bearer token watch.
+			name:    "empty stream key",
+			in:      "token1: ",
+			wantErr: true,
 		},
 		{
 			// SplitN(_, ":", 2) keeps anything past the first colon in the value.
@@ -202,8 +223,11 @@ func TestParseStreamKeys(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := parseStreamKeys(tc.in)
-			if !reflect.DeepEqual(got, tc.want) {
+			got, err := parseStreamKeys(tc.in)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("parseStreamKeys(%q) error = %v, wantErr %v", tc.in, err, tc.wantErr)
+			}
+			if !tc.wantErr && !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("parseStreamKeys(%q) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
