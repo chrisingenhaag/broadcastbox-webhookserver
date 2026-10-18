@@ -39,7 +39,7 @@ jobs:
           DOCKER_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_REGISTRY_USER: ${{ github.actor }}
         run: |
-          npx --yes semantic-release | tee release.log
+          npx --yes semantic-release@25 | tee release.log
           VERSION=$(grep -oE 'Published release v?[0-9]+\.[0-9]+\.[0-9]+' release.log | tail -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
           if [ -z "$VERSION" ]; then
             VERSION=$(grep -oE 'Created tag: v?[0-9]+\.[0-9]+\.[0-9]+' release.log | tail -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
@@ -47,6 +47,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Docker meta
+        if: steps.release.outputs.version != ''
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -56,6 +57,7 @@ jobs:
             type=raw,value=${{ steps.release.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
       - name: Log in to GitHub Container Registry
+        if: steps.release.outputs.version != ''
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -63,6 +65,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
+        if: steps.release.outputs.version != ''
         uses: docker/build-push-action@v5
         with:
           context: .
