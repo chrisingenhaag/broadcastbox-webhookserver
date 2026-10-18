@@ -1,0 +1,24 @@
+.dockerignore
+  s_0beccd56cbd854::t_f8a79577f805cd 1-4
+  s_0beccd56cbd854::t_6213fd389917fc 5
+Dockerfile
+  s_0beccd56cbd854::t_f8a79577f805cd 1,7,10
+go.mod
+  s_0beccd56cbd854::t_f8a79577f805cd 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8775e538d9abf23c913df178b8d54a6ef9a00888",
+  "prompts": {},
+  "sessions": {
+    "s_0beccd56cbd854": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aab4693d-11ad-4a2b-844f-f40d9c10f6d4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Christian Ingenhaag <christian.ingenhaag@googlemail.com>"
+    }
+  }
+}
